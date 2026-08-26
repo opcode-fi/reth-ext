@@ -27,7 +27,8 @@ alloy-eips = "2"
 alloy-primitives = "1"
 alloy-provider = "2"
 alloy-transport-http = "2"
-alloy-rpc-types = "2"
+alloy-rpc-types = "=2.0.5"
+alloy-rpc-types-engine = "=2.0.5"
 
 tokio = { version = "1", features = ["full"] }
 

@@ -33,3 +33,6 @@ tokio = { version = "1", features = ["full"] }
 tonic = "0.11"
 
 eyre = "0.6"
+
+alloy-rpc-types = "=2.0.5"
+alloy-rpc-types-engine = "=2.0.5"

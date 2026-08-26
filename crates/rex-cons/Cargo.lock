@@ -7018,6 +7018,8 @@ dependencies = [
 name = "rex-cons"
 version = "0.1.0"
 dependencies = [
+ "alloy-rpc-types",
+ "alloy-rpc-types-engine",
  "bincode",
  "exex-proto",
  "eyre",
