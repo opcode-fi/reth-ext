@@ -1,0 +1,50 @@
+[package]
+name = "rex-sim"
+version = "0.1.0"
+edition = "2024"
+description = "In-memory, lazily-hydrated revm DatabaseRef kept at chain tip by reth-rex notifications"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/opcode-fi/reth-ext"
+
+[dependencies]
+
+rex-cons = { path = "../rex-cons" }
+
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-tracing = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-exex-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0", features = ["serde", "serde-bincode-compat"] }
+reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-primitives-traits = "0.4.2"
+
+bincode = "1"
+serde = { version = "1", features = ["derive"] }
+
+alloy-consensus = "2"
+alloy-eips = "2"
+alloy-primitives = "1"
+alloy-provider = "2"
+alloy-transport-http = "2"
+alloy-rpc-types = "2"
+
+tokio = { version = "1", features = ["full"] }
+
+arc-swap = "1"
+crossbeam-channel = "0.5"
+
+thiserror = "2"
+rand = "0.8"
+url = "2"
+parking_lot = "0.12"
+eyre = "0.6"
+hashbrown = "0.15"
+
+[[example]]
+name = "bench_db"
+path = "examples/bench_db.rs"
+
+[[example]]
+name = "test_artifacts"
+path = "examples/test_artifacts.rs"

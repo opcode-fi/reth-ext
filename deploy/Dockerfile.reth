@@ -1,0 +1,36 @@
+# Build context is the repo root:
+#   docker build -f deploy/Dockerfile.reth -t reth-rex .
+FROM rust:1.93.0-bookworm AS builder
+
+RUN apt-get update && apt-get install -y \
+    libclang-dev \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# reth-rex depends on ../exex-proto, so both crate dirs keep their relative layout.
+# `target/` is excluded by .dockerignore.
+COPY crates/exex-proto ./crates/exex-proto
+COPY crates/reth-rex ./crates/reth-rex
+
+WORKDIR /build/crates/reth-rex
+RUN cargo build --release --locked
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/crates/reth-rex/target/release/reth-rex /usr/local/bin/reth-rex
+
+COPY deploy/reth.toml /config/reth.toml
+COPY deploy/reth.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]

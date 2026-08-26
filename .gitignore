@@ -1,0 +1,22 @@
+# Cargo build output. Each crate here is a standalone cargo project, so `target/`
+# appears per crate rather than once at the root.
+target/
+
+# Cargo.lock IS tracked, deliberately: every crate pins reth by git tag, and the
+# lock is the only thing that makes `cargo build --locked` reproducible.
+
+# Captured ExEx notifications (`cargo run --example subscribe` in rex-cons).
+# Multi-GB of bincode blobs, regenerable from any synced node.
+artifacts/
+*.bincode
+
+# Local deployment config: DATA_DIR points at a machine-specific path, and the
+# engine-API JWT must never be committed.
+deploy/.env
+.env
+*.hex
+
+# Editor / OS
+.DS_Store
+*.swp
+*~

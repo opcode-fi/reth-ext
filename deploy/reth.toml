@@ -1,0 +1,15 @@
+[prune]
+block_interval = 100
+
+[prune.segments]
+sender_recovery = { distance = 10064 }
+
+transaction_lookup = { distance = 10064 }
+receipts = { before = 11052984 }
+account_history = { distance = 10064 }
+storage_history = { distance = 10064 }
+bodies_history = { distance = 10064 }
+
+[prune.segments.receipts_log_filter]
+
+"0x00000000219ab540356cbb839cbe05303d7705fa" = { before = 11052984 }

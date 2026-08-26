@@ -1,0 +1,61 @@
+# Full mainnet node: reth-rex (execution + ExEx gRPC on :10000) + lighthouse
+# (consensus), sharing one engine-API JWT.
+#
+#   ./deploy/setup.sh          # creates $DATA_DIR + jwt, writes deploy/.env
+#   docker compose -f deploy/docker-compose.yml up -d --build
+#
+# All host state lives under $DATA_DIR (default ~/reth-ext-data). Only :30303
+# and the lighthouse p2p ports are public; the RPC and the ExEx stream are bound
+# to loopback — tunnel or peer them, do not expose them.
+
+services:
+  reth:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.reth
+    container_name: reth
+    restart: unless-stopped
+    ports:
+      - "30303:30303/tcp"
+      - "30303:30303/udp"
+      - "127.0.0.1:8545:8545"    # http rpc  — rex-sim's hydration source
+      - "127.0.0.1:8546:8546"    # ws rpc
+      - "127.0.0.1:10000:10000"  # ExEx notification stream — rex-cons connects here
+    volumes:
+      - ${DATA_DIR}/reth:/root/.local/share/reth
+      - ${DATA_DIR}/jwt:/jwt:ro
+    networks:
+      - eth-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  lighthouse:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.lighthouse
+    container_name: lighthouse
+    restart: unless-stopped
+    depends_on:
+      - reth
+    ports:
+      - "9000:9000/tcp"
+      - "9000:9000/udp"
+      - "9002:9002/udp"
+      - "127.0.0.1:5052:5052"
+    volumes:
+      - ${DATA_DIR}/lighthouse:/root/.lighthouse
+      - ${DATA_DIR}/jwt:/jwt:ro
+    networks:
+      - eth-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+networks:
+  eth-network:
+    driver: bridge

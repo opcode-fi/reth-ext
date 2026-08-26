@@ -1,0 +1,35 @@
+[package]
+name = "reth-rex"
+version = "0.1.0"
+edition = "2024"
+description = "Reth node binary with an ExEx that streams canonical-state notifications over gRPC"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/opcode-fi/reth-ext"
+
+[dependencies]
+
+exex-proto = { path = "../exex-proto" }
+
+reth = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-exex = { git = "https://github.com/paradigmxyz/reth.git", features = [
+    "serde",
+], tag = "v2.3.0" }
+reth-exex-types = { git = "https://github.com/paradigmxyz/reth.git", features = [
+    "serde",
+    "serde-bincode-compat",
+], tag = "v2.3.0" }
+reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+reth-tracing = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+
+alloy-rpc-types = "=2.0.5"
+alloy-rpc-types-engine = "=2.0.5"
+
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+futures-util = "0.3"
+
+tonic = "0.11"
+bincode = "1"
+
+eyre = "0.6"

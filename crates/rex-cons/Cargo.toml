@@ -1,0 +1,35 @@
+[package]
+name = "rex-cons"
+version = "0.1.0"
+edition = "2024"
+description = "Reconnecting gRPC consumer for reth-rex canonical-state notifications"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/opcode-fi/reth-ext"
+
+[lib]
+path = "src/lib.rs"
+
+[[example]]
+name = "subscribe"
+path = "examples/subscribe.rs"
+
+[dependencies]
+
+exex-proto = { path = "../exex-proto" }
+
+reth-exex = { git = "https://github.com/paradigmxyz/reth.git", features = [
+    "serde",
+], tag = "v2.3.0" }
+reth-exex-types = { git = "https://github.com/paradigmxyz/reth.git", features = [
+    "serde",
+    "serde-bincode-compat",
+], tag = "v2.3.0" }
+reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+bincode = "1"
+reth-tracing = { git = "https://github.com/paradigmxyz/reth.git", tag = "v2.3.0" }
+
+tokio = { version = "1", features = ["full"] }
+
+tonic = "0.11"
+
+eyre = "0.6"

@@ -1,0 +1,17 @@
+[package]
+name = "provider-ext"
+version = "0.1.0"
+edition = "2024"
+description = "Ergonomic eth_call and caching helpers for alloy providers"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/opcode-fi/reth-ext"
+
+[dependencies]
+alloy-primitives = "1"
+alloy-sol-types = "1"
+alloy-provider = "2"
+alloy-rpc-types = "2"
+alloy-transport = "2"
+thiserror = "2"
+hashbrown = "0.15"
+tokio = { version = "1", features = ["sync"] }

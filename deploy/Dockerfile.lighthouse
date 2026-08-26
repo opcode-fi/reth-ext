@@ -1,0 +1,9 @@
+# Build context is the repo root:
+#   docker build -f deploy/Dockerfile.lighthouse -t lighthouse-rex .
+FROM sigp/lighthouse:v8.2.0
+
+COPY deploy/lighthouse.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]

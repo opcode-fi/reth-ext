@@ -1,0 +1,8 @@
+# Build artifacts (tens of GB) — never part of an image build context. The
+# Dockerfiles COPY only the crate sources they need.
+**/target
+.git
+# Captured notification blobs and local secrets.
+**/artifacts
+**/.env
+*.hex
