@@ -1,15 +1,15 @@
 # reth-ext
 
-Extensions we run on top of [reth](https://github.com/paradigmxyz/reth) to get a
-**local, always-at-tip EVM state view you can simulate against without touching an
-RPC on the hot path.**
-
-A stock reth node knows the canonical chain the instant it reorgs or extends it,
-but nothing outside the process can see that without polling. These crates close
-that gap: an ExEx inside the node broadcasts every canonical-state notification
-over gRPC, a client reassembles the stream, and a `revm::DatabaseRef` applies the
-state diffs in memory so `basic_ref` / `storage_ref` / `code_by_hash_ref` are
-plain hash-map reads at the current block.
+Simulating against the head of the chain usually costs an RPC round trip for
+every account, slot and contract you touch, and hands back an answer that was
+stale before it arrived. **reth-ext moves the state into your process instead:**
+an ExEx streams every canonical-state notification out of a
+[reth](https://github.com/paradigmxyz/reth) node over gRPC, and a
+`revm::DatabaseRef` applies the diffs in memory — so `basic_ref` and
+`storage_ref` become hash-map reads at the current block, with no network on the
+hot path. You see the tip move the instant the node commits it, reorgs revert and
+re-apply cleanly, and when the sim cannot prove which block it is standing on it
+errors instead of handing you a plausible wrong number.
 
 Nothing here is chain-strategy code — it is the plumbing under it.
 
@@ -166,6 +166,13 @@ around, and lets the Docker build copy two directories instead of the repo.
 ```bash
 cd crates/rex-sim && cargo build --release --locked
 ```
+
+`rex-cons` and `rex-sim` declare `alloy-rpc-types` and `alloy-rpc-types-engine`
+at `=2.0.5` without using them directly. **That is deliberate and load-bearing.**
+A git dependency does not carry its `Cargo.lock`, so a consumer resolving these
+crates fresh picks up a newer alloy and reth v2.3.0 stops compiling
+(`missing field target_gas_limit in EthPayloadAttributes`). The pin is the only
+thing that travels with the dependency. Do not remove it as an unused dep.
 
 The locks are committed and `--locked` is the intended way to build: every reth
 dependency is a **git tag pin (`v2.3.0`)**, so the lock is the only thing making
