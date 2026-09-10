@@ -53,7 +53,10 @@ per simulation:
 
 - **State is local.** Once an account/slot has been touched it stays in the
   snapshot and is updated from execution outcomes, not re-fetched. A hot
-  simulation does zero network I/O.
+  simulation does zero network I/O. Diffs for accounts and slots that were
+  never touched are dropped, so the snapshot holds what you read, not
+  everything the chain wrote since you attached; those are fetched at the
+  snapshot's block on first touch.
 - **You know when the ground moved.** Every applied notification bumps a
   generation counter. `StaticState::guard()` / `check_guard()` let you detect
   that the block changed underneath a simulation that was already in flight, so

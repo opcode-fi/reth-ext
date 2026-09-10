@@ -117,8 +117,10 @@ the only writer. Per notification:
 3. **Build the new snapshot** ([`transitions.rs`](../crates/rex-sim/src/transitions.rs)):
    merge the flushed caches (entries tagged with a hash that is no longer the
    pre-state hash are discarded and counted), apply the chain's
-   `ExecutionOutcome` — account/storage/code diffs, receipts, changed accounts,
-   the sealed header and withdrawals — then swap it in and bump the generation.
+   `ExecutionOutcome` — account and storage diffs onto the entries the snapshot
+   already holds (a diff for an entry that was never touched is dropped and the
+   entry stays on the lazy path), code diffs, receipts, changed accounts, the
+   sealed header and withdrawals — then swap it in and bump the generation.
 
 4. **Notify.** `StateUpdate { block, block_hash, generation }` on a
    `watch::Sender`; an optional `LogSink` receives the block's logs; the first

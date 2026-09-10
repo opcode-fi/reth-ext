@@ -108,12 +108,16 @@ pub fn merge_caches(
 
 pub fn apply_execution_changes(state: &mut StateSnapshot, changes: &ExecutionChanges) {
     for (address, account_change) in &changes.accounts {
-        if let Some(info) = &account_change.info {
-            state.accounts.insert(*address, info.clone());
+        if let Some(info) = &account_change.info
+            && let Some(known) = state.accounts.get_mut(address)
+        {
+            *known = info.clone();
         }
 
         for (slot, value) in &account_change.storage {
-            state.storage.insert((*address, *slot), *value);
+            if let Some(known) = state.storage.get_mut(&(*address, *slot)) {
+                *known = *value;
+            }
         }
     }
 
@@ -366,28 +370,39 @@ mod tests {
     mod execution_changes {
         use super::*;
 
+        /// Only accounts the snapshot already holds take the block's writes; the rest stay lazy.
         #[test]
-        fn applies_account_info() {
+        fn applies_account_info_to_known_accounts_only() {
             let mut state = StateSnapshot::default();
+            state.accounts.insert(addr(1), account_info(1000));
 
             let mut changes = ExecutionChanges::default();
-            changes.accounts.insert(
-                addr(1),
-                AccountChange {
-                    info: Some(account_info(5000)),
-                    storage: HashMap::new(),
-                },
-            );
+            for (n, balance) in [(1, 5000), (2, 7000)] {
+                changes.accounts.insert(
+                    addr(n),
+                    AccountChange {
+                        info: Some(account_info(balance)),
+                        storage: HashMap::new(),
+                    },
+                );
+            }
 
             apply_execution_changes(&mut state, &changes);
 
-            let acc = state.accounts.get(&addr(1)).unwrap();
-            assert_eq!(acc.balance, U256::from(5000));
+            assert_eq!(
+                state.accounts.get(&addr(1)).unwrap().balance,
+                U256::from(5000)
+            );
+            assert!(!state.accounts.contains_key(&addr(2)));
         }
 
+        /// Only slots the snapshot already holds take the block's writes; the rest stay lazy.
         #[test]
-        fn applies_storage_changes() {
+        fn applies_storage_changes_to_known_slots_only() {
             let mut state = StateSnapshot::default();
+            state
+                .storage
+                .insert((addr(1), U256::from(0)), U256::from(50));
 
             let mut storage = HashMap::new();
             storage.insert(U256::from(0), U256::from(100));
@@ -408,10 +423,7 @@ mod tests {
                 state.storage.get(&(addr(1), U256::from(0))),
                 Some(&U256::from(100))
             );
-            assert_eq!(
-                state.storage.get(&(addr(1), U256::from(1))),
-                Some(&U256::from(200))
-            );
+            assert!(!state.storage.contains_key(&(addr(1), U256::from(1))));
         }
 
         #[test]
@@ -697,6 +709,7 @@ mod tests {
             assert!(!new_state.block_hashes.contains_key(&100));
         }
 
+        /// A reorg empties the snapshot, so the new chain's diffs land on nothing and every read goes lazy.
         #[test]
         fn applies_new_chain_changes() {
             let current = StateSnapshot::default();
@@ -723,7 +736,7 @@ mod tests {
                 },
             );
 
-            assert!(new_state.accounts.contains_key(&addr(1)));
+            assert!(!new_state.accounts.contains_key(&addr(1)));
 
             assert!(new_state.block_hashes.contains_key(&98));
             assert_eq!(new_state.receipts_history.len(), 1);
