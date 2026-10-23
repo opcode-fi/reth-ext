@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use alloy_eips::eip4895::Withdrawals;
 use arc_swap::ArcSwap;
-use crossbeam_channel::{Receiver, RecvTimeoutError};
+use crossbeam_channel::{RecvTimeoutError, Sender};
 use reth_ethereum_primitives::Receipt;
 use reth_primitives_traits::SealedHeader;
 use reth_revm::DatabaseRef;
@@ -109,11 +109,21 @@ pub struct FetchChannels {
     pub block_hash: mpsc::UnboundedSender<BlockHashFetchMessage>,
 }
 
-fn await_fetch<T>(
-    rx: Receiver<Result<T, SimError>>,
+fn fetch_through<Req, Resp>(
+    state: &StateSnapshot,
+    lookup: impl FnOnce(&StateSnapshot) -> Option<Resp>,
+    sender: &mpsc::UnboundedSender<FetchMessage<Req, Resp>>,
+    make_request: impl FnOnce(Sender<Result<Resp, SimError>>) -> FetchMessage<Req, Resp>,
     kind: FetchKind,
     timeout: Duration,
-) -> Result<T, SimError> {
+) -> Result<Resp, SimError> {
+    if let Some(hit) = lookup(state) {
+        return Ok(hit);
+    }
+    let (respond_to, rx) = crossbeam_channel::bounded(1);
+    sender
+        .send(make_request(respond_to))
+        .map_err(|_| SimError::FetcherClosed)?;
     match rx.recv_timeout(timeout) {
         Ok(response) => response,
         Err(RecvTimeoutError::Timeout) => {
@@ -247,26 +257,18 @@ impl DatabaseRef for StaticState {
             return Err(SimError::StaleState);
         }
 
-        if let Some(info) = state.accounts.get(&address) {
-            return Ok(Some(info.clone()));
-        }
-
-        let (tx, rx) = crossbeam_channel::bounded(1);
-
-        self.channels
-            .account
-            .send(AccountFetchMessage {
+        fetch_through(
+            &state,
+            |s| s.accounts.get(&address).cloned().map(Some),
+            &self.channels.account,
+            |respond_to| AccountFetchMessage {
                 request: AccountRequest {
                     address,
                     block: state.block,
                     block_hash: state.block_hash,
                 },
-                respond_to: tx,
-            })
-            .map_err(|_| SimError::FetcherClosed)?;
-
-        await_fetch(
-            rx,
+                respond_to,
+            },
             FetchKind::Account,
             Duration::from_millis(self.fetch.wait_timeout_ms),
         )
@@ -280,26 +282,18 @@ impl DatabaseRef for StaticState {
             return Err(SimError::StaleState);
         }
 
-        if let Some(code) = state.code.get(&code_hash) {
-            return Ok(code.clone());
-        }
-
-        let (tx, rx) = crossbeam_channel::bounded(1);
-
-        self.channels
-            .code
-            .send(CodeFetchMessage {
+        fetch_through(
+            &state,
+            |s| s.code.get(&code_hash).cloned(),
+            &self.channels.code,
+            |respond_to| CodeFetchMessage {
                 request: CodeRequest {
                     code_hash,
                     block: state.block,
                     address_hint: None,
                 },
-                respond_to: tx,
-            })
-            .map_err(|_| SimError::FetcherClosed)?;
-
-        await_fetch(
-            rx,
+                respond_to,
+            },
             FetchKind::Code,
             Duration::from_millis(self.fetch.wait_timeout_ms),
         )
@@ -313,27 +307,19 @@ impl DatabaseRef for StaticState {
             return Err(SimError::StaleState);
         }
 
-        if let Some(value) = state.storage.get(&(address, index)) {
-            return Ok(*value);
-        }
-
-        let (tx, rx) = crossbeam_channel::bounded(1);
-
-        self.channels
-            .storage
-            .send(StorageFetchMessage {
+        fetch_through(
+            &state,
+            |s| s.storage.get(&(address, index)).copied(),
+            &self.channels.storage,
+            |respond_to| StorageFetchMessage {
                 request: StorageRequest {
                     address,
                     index,
                     block: state.block,
                     block_hash: state.block_hash,
                 },
-                respond_to: tx,
-            })
-            .map_err(|_| SimError::FetcherClosed)?;
-
-        await_fetch(
-            rx,
+                respond_to,
+            },
             FetchKind::Storage,
             Duration::from_millis(self.fetch.wait_timeout_ms),
         )
@@ -347,25 +333,17 @@ impl DatabaseRef for StaticState {
             return Err(SimError::StaleState);
         }
 
-        if let Some(hash) = state.block_hashes.get(&number) {
-            return Ok(*hash);
-        }
-
-        let (tx, rx) = crossbeam_channel::bounded(1);
-
-        self.channels
-            .block_hash
-            .send(BlockHashFetchMessage {
+        fetch_through(
+            &state,
+            |s| s.block_hashes.get(&number).copied(),
+            &self.channels.block_hash,
+            |respond_to| BlockHashFetchMessage {
                 request: BlockHashRequest {
                     number,
                     at_block_hash: state.block_hash,
                 },
-                respond_to: tx,
-            })
-            .map_err(|_| SimError::FetcherClosed)?;
-
-        await_fetch(
-            rx,
+                respond_to,
+            },
             FetchKind::BlockHash,
             Duration::from_millis(self.fetch.wait_timeout_ms),
         )
