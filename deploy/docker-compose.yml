@@ -15,6 +15,7 @@ services:
       dockerfile: deploy/Dockerfile.reth
     container_name: reth
     restart: unless-stopped
+    oom_score_adj: -500
     ports:
       - "30303:30303/tcp"
       - "30303:30303/udp"
@@ -38,6 +39,7 @@ services:
       dockerfile: deploy/Dockerfile.lighthouse
     container_name: lighthouse
     restart: unless-stopped
+    oom_score_adj: -500
     depends_on:
       - reth
     ports:
