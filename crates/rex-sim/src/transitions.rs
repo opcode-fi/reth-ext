@@ -158,12 +158,7 @@ pub fn build_commit_state(
 
     apply_block_data(&mut new_state, blocks);
 
-    let mut changed: Vec<Address> = changes.accounts.keys().copied().collect();
-    changed.sort_unstable();
-    new_state.push_changed_accounts(tip.number, changed);
-
-    new_state.block = tip.number;
-    new_state.block_hash = tip.hash;
+    finish_at_tip(&mut new_state, changes, tip);
 
     (new_state, stats)
 }
@@ -202,12 +197,16 @@ pub fn build_reorg_state(
     apply_execution_changes(&mut new_state, changes);
     apply_block_data(&mut new_state, blocks);
 
+    finish_at_tip(&mut new_state, changes, tip);
+    new_state
+}
+
+fn finish_at_tip(new_state: &mut StateSnapshot, changes: &ExecutionChanges, tip: ChainTip) {
     let mut changed: Vec<Address> = changes.accounts.keys().copied().collect();
     changed.sort_unstable();
     new_state.push_changed_accounts(tip.number, changed);
     new_state.block = tip.number;
     new_state.block_hash = tip.hash;
-    new_state
 }
 
 pub fn build_revert_state(current: &StateSnapshot, common_ancestor: u64) -> StateSnapshot {

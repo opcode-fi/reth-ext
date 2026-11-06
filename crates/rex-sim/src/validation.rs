@@ -42,6 +42,15 @@ impl CommitValidation {
     }
 }
 
+fn chain_contains_current<I>(current: CurrentState, chain_blocks: I) -> bool
+where
+    I: IntoIterator<Item = (u64, B256)>,
+{
+    chain_blocks
+        .into_iter()
+        .any(|(num, hash)| num == current.block && hash == current.block_hash)
+}
+
 pub fn validate_chain_committed<I>(
     current: CurrentState,
     first_block: BlockInfo,
@@ -59,13 +68,11 @@ where
     }
 
     if first_block.number <= current.block {
-        for (num, hash) in chain_blocks {
-            if num == current.block && hash == current.block_hash {
-                return CommitValidation::Valid;
-            }
-        }
-
-        return CommitValidation::OverlapMismatch;
+        return if chain_contains_current(current, chain_blocks) {
+            CommitValidation::Valid
+        } else {
+            CommitValidation::OverlapMismatch
+        };
     }
 
     CommitValidation::Gap {
@@ -103,10 +110,8 @@ where
         return ReorgValidation::Valid;
     }
 
-    for (num, hash) in old_chain_blocks {
-        if num == current.block && hash == current.block_hash {
-            return ReorgValidation::Valid;
-        }
+    if chain_contains_current(current, old_chain_blocks) {
+        return ReorgValidation::Valid;
     }
 
     ReorgValidation::Mismatch
