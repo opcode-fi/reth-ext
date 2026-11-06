@@ -11,7 +11,7 @@ use rex_cons::ExExNotification;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::fetch::{AccountCache, BlockHashCache, CodeCache, StorageCache};
-use crate::state::StaticState;
+use crate::state::{StateSnapshot, StaticState};
 use crate::transitions::{
     AccountChange, BlockData, Caches, ChainTip, ExecutionChanges, build_commit_state,
     build_reorg_state, build_revert_state, mark_stale,
@@ -155,8 +155,34 @@ pub async fn run_changeset_manager(
                     hash: tip_hash,
                 };
 
-                let (new_state, cache_stats) =
-                    build_commit_state(&current_snapshot, caches, &changes, &blocks, tip);
+                let (new_state, cache_stats) = match is_stale {
+                    true => {
+                        info!(
+                            target: "rex-sim",
+                            current_block,
+                            dropped_accounts = current_snapshot.accounts.len(),
+                            dropped_storage = current_snapshot.storage.len(),
+                            "Dropping cached state accepted across a continuity gap"
+                        );
+                        let base = StateSnapshot {
+                            block: current_snapshot.block,
+                            block_hash: current_snapshot.block_hash,
+                            header: current_snapshot.header.clone(),
+                            withdrawals: current_snapshot.withdrawals.clone(),
+                            accounts: HashMap::new(),
+                            code: current_snapshot.code.clone(),
+                            storage: HashMap::new(),
+                            block_hashes: current_snapshot.block_hashes.clone(),
+                            receipts_history: current_snapshot.receipts_history.clone(),
+                            changed_accounts_history: current_snapshot
+                                .changed_accounts_history
+                                .clone(),
+                            stale: true,
+                        };
+                        build_commit_state(&base, Caches::default(), &changes, &blocks, tip)
+                    }
+                    false => build_commit_state(&current_snapshot, caches, &changes, &blocks, tip),
+                };
 
                 for (name, merged, discarded) in cache_stats.iter() {
                     if merged > 0 {
